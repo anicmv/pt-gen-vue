@@ -239,7 +239,7 @@ export async function gen_douban(sid: string) {
     douBanRating: Number(data['douban_rating_average'] ?? 0),
     douBanRatingCount: Number(data['douban_votes'] ?? 0),
     episodesCount: data['episodes'] !== '' ? Number(data['episodes']) : 0,
-    sessionCount: data['sessions'] !== '' ? Number(data['sessions']) : 0,
+    season: data['sessions'] !== '' ? Number(data['sessions']) : 0,
     durations: data['duration'],
     directors:
       data['director'] && data['director'].length > 0
@@ -308,7 +308,7 @@ export function format_douban(data: DoubanInfo) {
   description += data.imdbId ? `◎IMDb链接  ${imdb_link}\n` : ''
   description += `◎豆瓣评分　${doubanScore}\n`
   description += douban_link ? `◎豆瓣链接　${douban_link}\n` : ''
-  description += data.sessionCount ? `◎季　　数　${data.sessionCount}\n` : ''
+  description += data.season ? `◎季　　数　${data.season}\n` : ''
   description += data.episodesCount ? `◎集　　数　${data.episodesCount}\n` : ''
   description += data.durations !== '' ? `◎片　　长　${data.durations}\n` : ''
   description += data.directors !== '' ? `◎导　　演　${data.directors}\n` : ''
