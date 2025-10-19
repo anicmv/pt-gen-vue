@@ -1,33 +1,57 @@
 import { DoubanInfo } from '../type/douban'
 import { jsonp_parser, NONE_EXIST_ERROR, page_parser } from './common'
 
-// ✅ 改为函数，每次调用时读取
+// ========== 辅助函数 ==========
+function safeJoin(value: any, separator: string = ' / '): string {
+  if (Array.isArray(value)) {
+    return value.filter((v) => v).join(separator)
+  }
+  if (typeof value === 'string' && value) {
+    return value
+  }
+  return ''
+}
+
+function safeArray(value: any): any[] {
+  return Array.isArray(value) ? value : []
+}
+
+function safeString(value: any): string {
+  return value ? String(value) : ''
+}
+
+function safeReplace(str: any, search: string | RegExp, replace: string): string {
+  return str ? String(str).replace(search, replace) : ''
+}
+
+// ========== 获取豆瓣请求配置 ==========
 function getDoubanFetchInit(): RequestInit {
-  const DOUBAN_COOKIE = globalThis["DOUBAN_COOKIE"];
+  const DOUBAN_COOKIE = globalThis['DOUBAN_COOKIE']
 
   if (DOUBAN_COOKIE) {
     return {
       headers: {
         Cookie: DOUBAN_COOKIE,
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-      }
-    };
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      },
+    }
   }
 
   return {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-    }
-  };
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+    },
+  }
 }
 
+// ========== 搜索豆瓣 ==========
 export async function search_douban(query: string) {
   try {
     const douban_search = await fetch(
       `https://movie.douban.com/j/subject_suggest?q=${query}`,
-      getDoubanFetchInit()  // ✅ 使用函数
-    );
-    const douban_search_json = await douban_search.json();
+      getDoubanFetchInit(),
+    )
+    const douban_search_json = await douban_search.json()
 
     return {
       success: true,
@@ -41,18 +65,19 @@ export async function search_douban(query: string) {
           year: d.year,
           subtitle: d.sub_title,
           link: `https://movie.douban.com/subject/${d.id}/`,
-          id: d.id
-        };
+          id: d.id,
+        }
       }),
-    };
+    }
   } catch (e) {
     return {
       success: false,
-      error: "豆瓣搜索失败",
-    };
+      error: '豆瓣搜索失败',
+    }
   }
 }
 
+// ========== 生成豆瓣信息 ==========
 export async function gen_douban(sid: string) {
   const data: { [key: string]: any } = {
     site: 'douban',
@@ -60,7 +85,7 @@ export async function gen_douban(sid: string) {
   }
 
   const douban_link = `https://movie.douban.com/subject/${sid}/`
-  const db_page_resp = await fetch(douban_link, getDoubanFetchInit());
+  const db_page_resp = await fetch(douban_link, getDoubanFetchInit())
   const douban_page_raw = await db_page_resp.text()
 
   if (douban_page_raw.match(/你想访问的页面不存在/)) {
@@ -73,27 +98,27 @@ export async function gen_douban(sid: string) {
     })
   }
 
-  const awards_page_req = fetch(`${douban_link}awards`, getDoubanFetchInit());
+  const awards_page_req = fetch(`${douban_link}awards`, getDoubanFetchInit())
   const $ = page_parser(douban_page_raw)
 
   const title = $('title').text().replace('(豆瓣)', '').trim()
-  const ld_json = JSON.parse(
-    $('head > script[type="application/ld+json"]')
-      .html()
-      ?.replace(/(\r\n|\n|\r|\t)/gm, '') ?? '{}',
-  )
+
+  const ldJsonElement = $('head > script[type="application/ld+json"]').html()
+  const ld_json = ldJsonElement
+    ? JSON.parse(ldJsonElement.replace(/(\r\n|\n|\r|\t)/gm, '') || '{}')
+    : {}
 
   const fetch_anchor = function (anchor: any) {
-    return anchor[0].nextSibling.nodeValue.trim()
+    return anchor[0]?.nextSibling?.nodeValue?.trim() || ''
   }
 
   let imdb_api_req: Promise<Response> | undefined
   const imdb_anchor = $('#info span.pl:contains("IMDb")')
-  let imdb_id, imdb_link, imdb_average_rating, imdb_votes
+  let imdb_id, imdb_average_rating, imdb_votes
 
   if (imdb_anchor.length > 0) {
     data['imdb_id'] = imdb_id = fetch_anchor(imdb_anchor)
-    data['imdb_link'] = imdb_link = `https://www.imdb.com/title/${imdb_id}/`
+    data['imdb_link'] = `https://www.imdb.com/title/${imdb_id}/`
     imdb_api_req = fetch(
       `https://p.media-imdb.com/static-content/documents/v1/title/${imdb_id}/ratings%3Fjsonp=imdb.rating.run:imdb.api.title.ratings/data.json`,
     )
@@ -106,13 +131,13 @@ export async function gen_douban(sid: string) {
     .trim())
 
   const aka_anchor = $('#info span.pl:contains("又名")')
-  let aka
+  let aka = ''
   if (aka_anchor.length > 0) {
     aka = fetch_anchor(aka_anchor)
       .split(' / ')
       .sort((a: string, b: string) => a.localeCompare(b))
       .join('/')
-    data['aka'] = aka.split('/')
+    data['aka'] = aka.split('/').filter((v) => v)
   }
 
   let trans_title, this_title
@@ -124,18 +149,22 @@ export async function gen_douban(sid: string) {
     this_title = chinese_title
   }
 
-  data['trans_title'] = trans_title.split('/')
-  data['this_title'] = this_title.split('/')
+  data['trans_title'] = trans_title.split('/').filter((v) => v)
+  data['this_title'] = this_title.split('/').filter((v) => v)
 
   const regions_anchor = $('#info span.pl:contains("制片国家/地区")')
   const language_anchor = $('#info span.pl:contains("语言")')
   const episodes_anchor = $('#info span.pl:contains("集数")')
-  const sessions_anchor = $('#info span.pl:contains("季数")')
+  const season_anchor = $('#info span.pl:contains("季数")')
   const duration_anchor = $('#info span.pl:contains("单集片长")')
   const officialWebsite_anchor = $('#info > a')
 
   const year = ' ' + $('#content > h1 > span.year').text().substr(1, 4)
-  const region = regions_anchor[0] ? fetch_anchor(regions_anchor).split(' / ') : ''
+
+  const region = regions_anchor[0]
+    ? (fetch_anchor(regions_anchor) || '').split(' / ').filter((v) => v)
+    : []
+
   data['year'] = year
   data['region'] = region
   data['officialWebsite'] = officialWebsite_anchor[0]?.attribs?.href
@@ -145,7 +174,12 @@ export async function gen_douban(sid: string) {
     })
     .toArray()
 
-  data['language'] = language_anchor[0] ? fetch_anchor(language_anchor).split(' / ') : ''
+  const language = language_anchor[0]
+    ? (fetch_anchor(language_anchor) || '').split(' / ').filter((v) => v)
+    : []
+
+  data['language'] = language
+
   data['playdate'] = $('#info span[property="v:initialReleaseDate"]')
     .map(function () {
       return $(this).text().trim()
@@ -154,7 +188,7 @@ export async function gen_douban(sid: string) {
     .sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime())
 
   data['episodes'] = episodes_anchor[0] ? fetch_anchor(episodes_anchor) : ''
-  data['sessions'] = sessions_anchor[0] ? fetch_anchor(sessions_anchor) : ''
+  data['seasons'] = season_anchor[0] ? fetch_anchor(season_anchor) : ''
   data['duration'] = duration_anchor[0]
     ? fetch_anchor(duration_anchor)
     : $('#info span[property="v:runtime"]').text().trim()
@@ -179,8 +213,9 @@ export async function gen_douban(sid: string) {
   data['douban_rating'] =
     `${data['douban_rating_average'] || 0}/10 from ${data['douban_votes']} users`
 
-  data['poster'] = ld_json?.['image']?.replace(/s(_ratio_poster|pic)/g, 'm$1')
-  // .replace("img3", "img1");
+  data['poster'] = ld_json?.['image']
+    ?.replace(/s(_ratio_poster|pic)/g, 'l$1')
+    .replace('img3', 'img1')
 
   data['director'] = ld_json?.['director'] ? ld_json?.['director'] : []
   data['writer'] = ld_json?.['author'] ? ld_json?.['author'] : []
@@ -198,16 +233,19 @@ export async function gen_douban(sid: string) {
   const awards_page_resp = await awards_page_req
   const awards_page_raw = await awards_page_resp.text()
   const awards_page = page_parser(awards_page_raw)
-  data['awards'] = awards_page('#content > div > div.article')
-    .html()
-    ?.replace(/[ \n]/g, '')
-    .replace(/<\/li><li>/g, '</li> <li>')
-    .replace(/<\/a><span/g, '</a> <span')
-    .replace(/<(div|ul)[^>]*>/g, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/ +\n/g, '\n')
-    .trim()
+
+  const awardsHtml = awards_page('#content > div > div.article').html()
+  data['awards'] = awardsHtml
+    ? awardsHtml
+        .replace(/[ \n]/g, '')
+        .replace(/<\/li><li>/g, '</li> <li>')
+        .replace(/<\/a><span/g, '</a> <span')
+        .replace(/<(div|ul)[^>]*>/g, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/ +\n/g, '\n')
+        .trim()
+    : ''
 
   if (imdb_api_req) {
     const imdb_api_resp = await imdb_api_req
@@ -222,52 +260,53 @@ export async function gen_douban(sid: string) {
 
   const douban_data: DoubanInfo = {
     id: Number(sid),
-    title: trans_title,
+    title: safeString(trans_title),
     type: ld_json?.['@type'] ?? '',
-    originalTitle: this_title,
-    translatedName: trans_title,
-    year: Number(year.trim()),
-    countries: region.join(' / '),
-    officialWebsite: data?.['officialWebsite'] as string,
-    mainPic: data['poster'],
-    genres: data['genre'].join(' / '),
-    languages: data['language'].join(' / '),
-    publishDate: data['playdate'].join(' / '),
+    originalTitle: safeString(this_title),
+    translatedName: safeString(trans_title),
+    year: Number(safeString(year).trim() || 0),
+    countries: safeJoin(region),
+    officialWebsite: safeString(data?.['officialWebsite']),
+    mainPic: safeString(data['poster']),
+    genres: safeJoin(safeArray(data['genre'])),
+    languages: safeJoin(language),
+    publishDate: safeJoin(safeArray(data['playdate'])),
     imdbRating: Number(imdb_average_rating ?? 0),
     imdbRatingCount: Number(imdb_votes ?? 0),
-    imdbId: imdb_id,
+    imdbId: safeString(imdb_id),
     douBanRating: Number(data['douban_rating_average'] ?? 0),
     douBanRatingCount: Number(data['douban_votes'] ?? 0),
     episodesCount: data['episodes'] !== '' ? Number(data['episodes']) : 0,
-    season: data['sessions'] !== '' ? Number(data['sessions']) : 0,
-    durations: data['duration'],
-    directors:
-      data['director'] && data['director'].length > 0
-        ? data['director'].map((x: any) => x['name']).join(' / ')
-        : '',
-    actors:
-      data['cast'] && data['cast'].length > 0
-        ? data['cast'].map((x: any) => x['name']).join('\n' + '　'.repeat(3) + '  　')
-        : '',
-    dramatist:
-      data['writer'] && data['writer'].length > 0
-        ? data['writer'].map((x: any) => x['name']).join(' / ')
-        : '',
-    intro: data['introduction'].replace(/\n/g, '\n' + '　'.repeat(2)),
-    awards: data['awards'].replace(/\n/g, '\n' + '　'.repeat(2)),
-    tags: data['tags'] && data['tags'].length > 0 ? data['tags'].join(' | ') : '',
+    season: data['seasons'] !== '' ? Number(data['seasons']) : 0,
+    durations: safeString(data['duration']),
+    directors: safeJoin(
+      safeArray(data['director'])
+        .map((x: any) => x?.['name'])
+        .filter((v) => v),
+    ),
+    actors: safeArray(data['cast'])
+      .map((x: any) => x?.['name'] || '')
+      .filter((v) => v)
+      .join('\n' + '　'.repeat(5)),
+    dramatist: safeJoin(
+      safeArray(data['writer'])
+        .map((x: any) => x?.['name'])
+        .filter((v) => v),
+    ),
+    intro: safeReplace(data['introduction'], /\n/g, '\n' + '　'.repeat(2)),
+    awards: safeReplace(data['awards'], /\n/g, '\n' + '　'.repeat(2)),
+    tags: safeJoin(safeArray(data['tags']), ' | '),
   }
 
-  console.log(JSON.stringify(douban_data))
+  console.log(douban_data)
 
-  // 从环境变量中获取配置
-  const SAVE_API_URL = globalThis['SAVE_API_URL'] || ''
-  const SAVE_API_TOKEN = globalThis['SAVE_API_TOKEN'] || ''
+  const SAVE_API_URL = globalThis['SAVE_API_URL']
+  const SAVE_API_TOKEN = globalThis['SAVE_API_TOKEN']
 
-  // console.log(SAVE_API_URL)
-  // console.log(SAVE_API_TOKEN)
-  // 只有配置了 URL 和 token 才发送
   if (SAVE_API_URL && SAVE_API_TOKEN) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 3000)
+
     await fetch(SAVE_API_URL, {
       method: 'POST',
       body: JSON.stringify(douban_data),
@@ -275,9 +314,14 @@ export async function gen_douban(sid: string) {
         'Content-Type': 'application/json',
         Authorization: 'Bearer ' + SAVE_API_TOKEN,
       },
-    }).catch((e) => {
-      console.log(e)
+      signal: controller.signal,
     })
+      .catch((e) => {
+        console.log(e)
+      })
+      .finally(() => {
+        clearTimeout(timeoutId)
+      })
   }
 
   data['format'] = format_douban(douban_data)
@@ -289,6 +333,7 @@ export async function gen_douban(sid: string) {
   }
 }
 
+// ========== 格式化豆瓣信息 ==========
 export function format_douban(data: DoubanInfo) {
   const imdb_link = `https://www.imdb.com/title/${data.imdbId}/`
   const douban_link = `https://movie.douban.com/subject/${data.id}/`
