@@ -1,0 +1,24 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "pt-gen-vue",
+  "main": "api/index.ts",
+  "compatibility_date": "2025-03-21",
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "kv_namespaces": [
+    {
+      "binding": "PT_GEN_STORE",
+      "id": "YOUR_KV_NAMESPACE_ID_HERE"
+    }
+  ],
+  "vars": {
+    "DISABLE_SEARCH": "",
+    "SAVE_API_URL": "https://your-api-url.com/save",
+    "SAVE_API_TOKEN": "your_token_here"
+  }
+}
