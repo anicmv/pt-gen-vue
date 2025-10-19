@@ -125,7 +125,7 @@ async function handleApiRequest(request: Request, env: Env): Promise<Response> {
         if (env.PT_GEN_STORE && typeof response_data.error === "undefined") {
           const cache_key = `${uri.searchParams.get("site") || uri.searchParams.get("source")}_${uri.searchParams.get("sid") || uri.searchParams.get("search")}`;
           await env.PT_GEN_STORE.put(cache_key, JSON.stringify(response_data), {
-            expirationTtl: 86400 * 2
+            expirationTtl: 86400 * 14
           });
         }
 
