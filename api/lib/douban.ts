@@ -1,18 +1,33 @@
 import { DoubanInfo } from '../type/douban'
 import { jsonp_parser, NONE_EXIST_ERROR, page_parser } from './common'
 
-let fetch_init = {}
-if (globalThis['DOUBAN_COOKIE']) {
-  fetch_init = { headers: { Cookie: globalThis['DOUBAN_COOKIE'] } }
+// ✅ 改为函数，每次调用时读取
+function getDoubanFetchInit(): RequestInit {
+  const DOUBAN_COOKIE = globalThis["DOUBAN_COOKIE"];
+
+  if (DOUBAN_COOKIE) {
+    return {
+      headers: {
+        Cookie: DOUBAN_COOKIE,
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+      }
+    };
+  }
+
+  return {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+    }
+  };
 }
 
 export async function search_douban(query: string) {
   try {
     const douban_search = await fetch(
       `https://movie.douban.com/j/subject_suggest?q=${query}`,
-      fetch_init,
-    )
-    const douban_search_json = await douban_search.json()
+      getDoubanFetchInit()  // ✅ 使用函数
+    );
+    const douban_search_json = await douban_search.json();
 
     return {
       success: true,
@@ -26,15 +41,15 @@ export async function search_douban(query: string) {
           year: d.year,
           subtitle: d.sub_title,
           link: `https://movie.douban.com/subject/${d.id}/`,
-          id: d.id,
-        }
+          id: d.id
+        };
       }),
-    }
+    };
   } catch (e) {
     return {
       success: false,
-      error: '豆瓣搜索失败',
-    }
+      error: "豆瓣搜索失败",
+    };
   }
 }
 
@@ -45,7 +60,7 @@ export async function gen_douban(sid: string) {
   }
 
   const douban_link = `https://movie.douban.com/subject/${sid}/`
-  const db_page_resp = await fetch(douban_link, fetch_init)
+  const db_page_resp = await fetch(douban_link, getDoubanFetchInit());
   const douban_page_raw = await db_page_resp.text()
 
   if (douban_page_raw.match(/你想访问的页面不存在/)) {
@@ -58,7 +73,7 @@ export async function gen_douban(sid: string) {
     })
   }
 
-  const awards_page_req = fetch(`${douban_link}awards`, fetch_init)
+  const awards_page_req = fetch(`${douban_link}awards`, getDoubanFetchInit());
   const $ = page_parser(douban_page_raw)
 
   const title = $('title').text().replace('(豆瓣)', '').trim()

@@ -20,13 +20,20 @@ function toCamelCase(obj: any): any {
 export async function search_douban_mobile(query: string) {
   try {
     const url = `https://m.douban.com/rexxar/api/v2/search/subjects?type=movie&q=${encodeURIComponent(query)}`;
+    // 从环境变量获取 Cookie
+    const DOUBAN_COOKIE = globalThis["DOUBAN_COOKIE"];
 
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15',
-        'Referer': 'https://m.douban.com/',
-      },
-    });
+    const headers: HeadersInit = {
+      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X) AppleWebKit/605.1.15',
+      'Referer': 'https://m.douban.com/',
+    };
+
+    // 如果有 Cookie，添加到请求头
+    if (DOUBAN_COOKIE) {
+      headers['Cookie'] = DOUBAN_COOKIE;
+    }
+
+    const response = await fetch(url, { headers });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);

@@ -44,6 +44,7 @@ export default {
     // 将 env 设置到 globalThis
     (globalThis as any).SAVE_API_URL = env.SAVE_API_URL;
     (globalThis as any).SAVE_API_TOKEN = env.SAVE_API_TOKEN;
+    (globalThis as any).DOUBAN_COOKIE = env.DOUBAN_COOKIE;
 
     const url = new URL(request.url);
 

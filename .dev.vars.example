@@ -1,2 +1,6 @@
+# 数据保存 API（可选）
 SAVE_API_URL=https://your-api-url.com/save
 SAVE_API_TOKEN=your_token_here
+
+# 豆瓣 Cookie（可选，用于绕过限制）
+DOUBAN_COOKIE=bid=xxx; douban-fav-remind=1; __utma=xxx; __utmz=xxx; ...
