@@ -141,7 +141,7 @@ const handleResultClick = async (url: string) => {
   <div class="min-h-screen flex flex-col">
     <!-- Header -->
     <nav class="bg-[#222] text-white h-[50px] flex items-center justify-center px-4">
-      <span class="text-lg font-bold">PT Gen（Vue）</span>
+      <span class="text-lg font-bold">PT Gen</span>
     </nav>
 
     <!-- Main Content -->
