@@ -130,6 +130,7 @@ export async function gen_douban(sid: string) {
   const regions_anchor = $('#info span.pl:contains("制片国家/地区")')
   const language_anchor = $('#info span.pl:contains("语言")')
   const episodes_anchor = $('#info span.pl:contains("集数")')
+  const sessions_anchor = $('#info span.pl:contains("季数")')
   const duration_anchor = $('#info span.pl:contains("单集片长")')
   const officialWebsite_anchor = $('#info > a')
 
@@ -153,6 +154,7 @@ export async function gen_douban(sid: string) {
     .sort((a: string, b: string) => new Date(a).getTime() - new Date(b).getTime())
 
   data['episodes'] = episodes_anchor[0] ? fetch_anchor(episodes_anchor) : ''
+  data['sessions'] = sessions_anchor[0] ? fetch_anchor(sessions_anchor) : ''
   data['duration'] = duration_anchor[0]
     ? fetch_anchor(duration_anchor)
     : $('#info span[property="v:runtime"]').text().trim()
@@ -237,6 +239,7 @@ export async function gen_douban(sid: string) {
     douBanRating: Number(data['douban_rating_average'] ?? 0),
     douBanRatingCount: Number(data['douban_votes'] ?? 0),
     episodesCount: data['episodes'] !== '' ? Number(data['episodes']) : 0,
+    sessionCount: data['sessions'] !== '' ? Number(data['sessions']) : 0,
     durations: data['duration'],
     directors:
       data['director'] && data['director'].length > 0
@@ -305,6 +308,7 @@ export function format_douban(data: DoubanInfo) {
   description += data.imdbId ? `◎IMDb链接  ${imdb_link}\n` : ''
   description += `◎豆瓣评分　${doubanScore}\n`
   description += douban_link ? `◎豆瓣链接　${douban_link}\n` : ''
+  description += data.sessionCount ? `◎季　　数　${data.sessionCount}\n` : ''
   description += data.episodesCount ? `◎集　　数　${data.episodesCount}\n` : ''
   description += data.durations !== '' ? `◎片　　长　${data.durations}\n` : ''
   description += data.directors !== '' ? `◎导　　演　${data.directors}\n` : ''

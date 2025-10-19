@@ -17,6 +17,7 @@ export interface DoubanInfo {
   douBanRating: number;
   douBanRatingCount: number;
   episodesCount: number;
+  sessionCount: number;
   durations: string;
   directors: string;
   actors: string;
